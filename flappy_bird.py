@@ -1,14 +1,16 @@
 from operator import ne
 import pygame
 import neat
-import time
 import os
 import random
+import visualize
+import pickle
 
 pygame.font.init()
+pygame.init()
 
 # Defining the display window
-WIN_WIDTH, WIN_HEIGHT = 500, 800
+WIN_WIDTH, WIN_HEIGHT = 570, 800
 win = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 pygame.display.set_caption("Flappy Bird")
 
@@ -26,7 +28,6 @@ STAT_FONT = pygame.font.SysFont("comicsans", 50)
 
 #frame rate for the game i.e. the #times the display will be refreshed in one second
 FPS = 60
-
 
 # Making classes to represent each entity and define their behaviour in the game
 class Bird:
@@ -65,11 +66,11 @@ class Bird:
 
         #formula defining the arc for the bird when it jumps
         #displacement disp is in pixels
-        disp = self.vel*self.tick_count + 1.5*self.tick_count**2
+        disp = self.vel + 1.8*(self.tick_count/2)
 
         #setting a limit to the velocity when going downwards and upwards
-        if disp > 16:
-            disp = 16
+        if disp > 8:
+            disp = 8
         if disp < 0:
             disp -= 2
 
@@ -245,7 +246,8 @@ def eval_fitness(genomes, config):
     score = 0
 
     run = True
-    #the game loop for the pygame
+
+    #the game loop
     while run:
         clock.tick(FPS)      
         for event in pygame.event.get():
@@ -254,9 +256,16 @@ def eval_fitness(genomes, config):
                 pygame.quit()
                 quit()
         
+        # end loop if fitness threshold reached
+        if len(genomes) > 1: # end loop only if in training
+            if max([g.fitness for _, g in genomes]) > config.fitness_threshold:
+                run = False
+                pygame.quit()
+                break
+        
         pipe_index = 0
         if len(birds) > 0:
-            if len(pipes) > 1 and birds[0].x > pipes[0].x + pipes[0].PIPE_TOP.get_width():
+            if len(pipes) > 1 and pipes[1].x + pipes[1].PIPE_TOP.get_width()/2 < WIN_WIDTH:
                 pipe_index = 1
         else:
             run = False
@@ -266,7 +275,10 @@ def eval_fitness(genomes, config):
             bird.move()
             ge[x].fitness += 0.1
 
-            output = nets[x].activate((bird.y, abs(bird.y - pipes[pipe_index].height), abs(bird.y - pipes[pipe_index].bottom)))
+            x_dist = abs(bird.x - pipes[pipe_index].x)
+            y_dist_1 = (x_dist**2 + abs(bird.y - pipes[pipe_index].height)**2)**(1/2)
+            y_dist_2 = (x_dist**2 + abs(bird.y - pipes[pipe_index].bottom)**2)**(1/2)
+            output = nets[x].activate((bird.y, bird.y - pipes[pipe_index].height, bird.y - pipes[pipe_index].bottom))
 
             if output[0] > 0.5:
                 bird.jump()
@@ -312,7 +324,79 @@ def eval_fitness(genomes, config):
         draw_window(win, birds, pipes, base, score)
 
 
-def run(config_path):
+def human_play():
+    base = Base(730)
+    pipes = [Pipe(700)]
+    bird = Bird(230,350)
+    #use clock object to set the tick rate i.e no. of frames per sec
+    #prevents the game from using the system's speed and use this measure of time instead
+    clock = pygame.time.Clock()
+
+    score = 0
+
+    run = True
+
+    #the game loop
+    while run:
+        clock.tick(FPS)      
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+                pygame.quit()
+                quit()
+        
+        pipe_index = 0
+        if bird:
+            if len(pipes) > 1 and pipes[1].x + pipes[1].PIPE_TOP.get_width()/2 < WIN_WIDTH:
+                pipe_index = 1
+        else:
+            run = False
+            break
+
+        # move bird
+        bird.move()
+        for key in pygame.key.get_pressed():
+            if key:
+                bird.jump() 
+
+        add_pipe = False
+        rem = []
+        for pipe in pipes:
+            if pipe.collide(bird):
+                bird = None
+                return
+        
+            if not pipe.passed and pipe.x < bird.x:
+                pipe.passed = True
+                add_pipe = True
+
+            if pipe.x + pipe.PIPE_TOP.get_width() < 0:
+                rem.append(pipe)
+            
+            pipe.move()
+
+        if add_pipe:
+            score += 1
+            pipes.append(Pipe(700))
+
+        for r in rem:
+            pipes.remove(r)
+
+        # check if bird has hit ground
+        if bird.y + bird.img.get_height() > 730 or bird.y < 0:
+            bird = None
+            return
+
+        base.move()
+        draw_window(win, [bird], pipes, base, score)
+
+
+def train():
+    global FPS
+    FPS = 6000
+    local_dir = os.path.dirname(__file__)
+    config_path = os.path.join(local_dir, "config.txt")
+
     config = neat.config.Config(
         neat.DefaultGenome,
         neat.DefaultReproduction,
@@ -323,13 +407,55 @@ def run(config_path):
     p = neat.Population(config)
 
     p.add_reporter(neat.StdOutReporter(True))
-    p.add_reporter(neat.StatisticsReporter())
+    stats = neat.StatisticsReporter()
+    p.add_reporter(stats)
 
-    winner = p.run(eval_fitness, 50)
+    winner = p.run(eval_fitness, 150)
+
     print('\nBest genome:\n{!s}'.format(winner))
 
-if __name__ == "__main__":
+    node_names = {-1:'Bird', -2: 'Top Pipe', -3: 'Bottom Pipe', 0:'Jump'}
+    visualize.draw_net(config, winner, view=False, node_names=node_names)
+    visualize.plot_stats(stats, ylog=False, view=False)
+    visualize.plot_species(stats, view=False)
+
+    # save trained model
+    pickle.dump(winner, open("model", "wb"))
+
+
+def ai_play():
     local_dir = os.path.dirname(__file__)
     config_path = os.path.join(local_dir, "config.txt")
-    run(config_path)
 
+    config = neat.config.Config(
+        neat.DefaultGenome,
+        neat.DefaultReproduction,
+        neat.DefaultSpeciesSet,
+        neat.DefaultStagnation,
+        config_path
+    )
+
+    saved_model = pickle.load(open("model", "rb"))
+    eval_fitness([("", saved_model)], config)
+
+
+if __name__ == "__main__":
+    import argparse
+
+    about = "Training a model to play Flappy Bird"
+
+    # Initiate the parser
+    parser = argparse.ArgumentParser(about)
+    parser.add_argument("--train", help="train model to play the game", action="store_true")
+    parser.add_argument("--ai", help="let the ai play", action="store_true")
+    parser.add_argument("--human", help="try playing yourself", action="store_true")
+
+    # Read arguments from the command line
+    args = parser.parse_args()
+
+    if args.train:
+        train()
+    elif args.ai:
+        ai_play()
+    elif args.human:
+        human_play()

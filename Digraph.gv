@@ -1,0 +1,12 @@
+digraph {
+	node [fontsize=9 height=0.2 shape=circle width=0.2]
+	Bird [fillcolor=lightgray shape=box style=filled]
+	"Top Pipe" [fillcolor=lightgray shape=box style=filled]
+	"Bottom Pipe" [fillcolor=lightgray shape=box style=filled]
+	Jump [fillcolor=lightblue style=filled]
+	6 [fillcolor=white style=filled]
+	Bird -> 6 [color=green penwidth=0.12444117773974755 style=solid]
+	"Top Pipe" -> 6 [color=green penwidth=0.31704908331937054 style=solid]
+	"Bottom Pipe" -> 6 [color=green penwidth=0.3312041398927108 style=solid]
+	6 -> Jump [color=green penwidth=0.5121404134143588 style=solid]
+}

@@ -24,7 +24,7 @@ BIRD_IMGS = [
 PIPE_IMG = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs", "pipe.png")))
 BASE_IMG = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs", "base.png")))
 BG_IMG = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs", "bg.png")))
-STAT_FONT = pygame.font.SysFont("comicsans", 50)
+STAT_FONT = pygame.font.SysFont("roboto", 50)
 
 #frame rate for the game i.e. the #times the display will be refreshed in one second
 FPS = 60
@@ -435,7 +435,7 @@ def ai_play():
         config_path
     )
 
-    saved_model = pickle.load(open("model", "rb"))
+    saved_model = pickle.load(open("model1", "rb"))
     eval_fitness([("", saved_model)], config)
 
 

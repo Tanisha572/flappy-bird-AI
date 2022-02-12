@@ -131,11 +131,11 @@ class Pipe:
         self.PIPE_BOTTOM = PIPE_IMG
 
         self.passed = False
-        self.set_height()
+        self.set_height(random.randrange(50,450))
 
     #sets the height for the pipe
-    def set_height(self):
-        self.height = random.randrange(50,450)
+    def set_height(self, height):
+        self.height = height
         self.top = self.height-self.PIPE_TOP.get_height()   #to get the x-coordinate from the height, as per the pygame coordinate
         self.bottom =self.height + self.GAP
 
@@ -239,12 +239,11 @@ def eval_fitness(genomes, config):
 
     base = Base(730)
     pipes = [Pipe(700)]
-    #use clock object to set the tick rate i.e no. of frames per sec
-    #prevents the game from using the system's speed and use this measure of time instead
+    # use clock object to set the tick rate i.e no. of frames per sec
+    # prevents the game from using the system's speed and use this measure of time instead
     clock = pygame.time.Clock()
 
     score = 0
-
     run = True
 
     #the game loop
@@ -256,8 +255,9 @@ def eval_fitness(genomes, config):
                 pygame.quit()
                 quit()
         
-        # end loop if fitness threshold reached
-        if len(genomes) > 1: # end loop only if in training
+        # check if in training
+        if len(genomes) > 1:
+            # end loop if fitness threshold reached
             if max([g.fitness for _, g in genomes]) > config.fitness_threshold:
                 run = False
                 pygame.quit()
@@ -273,12 +273,14 @@ def eval_fitness(genomes, config):
 
         for x, bird in enumerate(birds):
             bird.move()
-            ge[x].fitness += 0.1
+            # increase fitness for every small forward progress
+            # and increase fitness if bird remains in center
+            center = WIN_HEIGHT/2
+            bird_from_center = abs(center - bird.y)
+            bird_from_edge = center - bird_from_center
+            ge[x].fitness += bird_from_edge * 0.01
 
-            x_dist = abs(bird.x - pipes[pipe_index].x)
-            y_dist_1 = (x_dist**2 + abs(bird.y - pipes[pipe_index].height)**2)**(1/2)
-            y_dist_2 = (x_dist**2 + abs(bird.y - pipes[pipe_index].bottom)**2)**(1/2)
-            output = nets[x].activate((bird.y, bird.y - pipes[pipe_index].height, bird.y - pipes[pipe_index].bottom))
+            output = nets[x].activate((bird.y, pipes[pipe_index].x, pipes[pipe_index].bottom))
 
             if output[0] > 0.5:
                 bird.jump()
@@ -308,7 +310,13 @@ def eval_fitness(genomes, config):
             # so we incrent fitness fo all
             for g in ge:
                 g.fitness += 5
-            pipes.append(Pipe(700))
+            pipe = Pipe(700)
+            if len(genomes) > 1 and score < 10:
+                if score % 2 == 0:
+                    pipe.set_height(50)
+                else:
+                    pipe.set_height(500)
+            pipes.append(pipe)
 
         for r in rem:
             pipes.remove(r)
@@ -328,8 +336,8 @@ def human_play():
     base = Base(730)
     pipes = [Pipe(700)]
     bird = Bird(230,350)
-    #use clock object to set the tick rate i.e no. of frames per sec
-    #prevents the game from using the system's speed and use this measure of time instead
+    # use clock object to set the tick rate i.e no. of frames per sec
+    # prevents the game from using the system's speed and use this measure of time instead
     clock = pygame.time.Clock()
 
     score = 0
@@ -344,14 +352,6 @@ def human_play():
                 run = False
                 pygame.quit()
                 quit()
-        
-        pipe_index = 0
-        if bird:
-            if len(pipes) > 1 and pipes[1].x + pipes[1].PIPE_TOP.get_width()/2 < WIN_WIDTH:
-                pipe_index = 1
-        else:
-            run = False
-            break
 
         # move bird
         bird.move()
@@ -394,6 +394,7 @@ def human_play():
 def train():
     global FPS
     FPS = 6000
+
     local_dir = os.path.dirname(__file__)
     config_path = os.path.join(local_dir, "config.txt")
 
@@ -410,7 +411,7 @@ def train():
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
 
-    winner = p.run(eval_fitness, 150)
+    winner = p.run(eval_fitness, 10000)
 
     print('\nBest genome:\n{!s}'.format(winner))
 
@@ -435,7 +436,7 @@ def ai_play():
         config_path
     )
 
-    saved_model = pickle.load(open("model1", "rb"))
+    saved_model = pickle.load(open("model", "rb"))
     eval_fitness([("", saved_model)], config)
 
 

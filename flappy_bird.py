@@ -278,7 +278,7 @@ def eval_fitness(genomes, config):
             center = WIN_HEIGHT/2
             bird_from_center = abs(center - bird.y)
             bird_from_edge = center - bird_from_center
-            ge[x].fitness += bird_from_edge * 0.01
+            ge[x].fitness += bird_from_edge * 0.1
 
             output = nets[x].activate((bird.y, pipes[pipe_index].x, pipes[pipe_index].bottom))
 

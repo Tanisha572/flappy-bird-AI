@@ -137,7 +137,7 @@ def draw_net(config, genome, view=False, filename=None, node_names=None, show_di
         'height': '0.2',
         'width': '0.2'}
 
-    dot = graphviz.Digraph(format=fmt, node_attr=node_attrs)
+    dot = graphviz.Digraph(format=fmt, node_attr=node_attrs, graph_attr={'rankdir':'LR'})
 
     inputs = set()
     for k in config.genome_config.input_keys:
@@ -146,22 +146,14 @@ def draw_net(config, genome, view=False, filename=None, node_names=None, show_di
         input_attrs = {'style': 'filled', 'shape': 'box', 'fillcolor': node_colors.get(k, 'lightgray')}
         dot.node(name, _attributes=input_attrs)
 
-    outputs = set()
-    for k in config.genome_config.output_keys:
-        outputs.add(k)
-        name = node_names.get(k, str(k))
-        node_attrs = {'style': 'filled', 'fillcolor': node_colors.get(k, 'lightblue')}
-
-        dot.node(name, _attributes=node_attrs)
-
     if prune_unused:
         connections = set()
         for cg in genome.connections.values():
             if cg.enabled or show_disabled:
-                connections.add((cg.in_node_id, cg.out_node_id))
+                connections.add(cg.key)
 
-        used_nodes = copy.copy(outputs)
-        pending = copy.copy(outputs)
+        used_nodes = {}
+        pending = {}
         while pending:
             new_pending = set()
             for a, b in connections:
@@ -173,7 +165,7 @@ def draw_net(config, genome, view=False, filename=None, node_names=None, show_di
         used_nodes = set(genome.nodes.keys())
 
     for n in used_nodes:
-        if n in inputs or n in outputs:
+        if n in inputs:
             continue
 
         attrs = {'style': 'filled',

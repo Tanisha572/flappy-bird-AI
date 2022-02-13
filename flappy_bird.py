@@ -280,7 +280,7 @@ def eval_fitness(genomes, config):
             bird_from_edge = center - bird_from_center
             ge[x].fitness += bird_from_edge * 0.1
 
-            output = nets[x].activate((bird.y, pipes[pipe_index].x, pipes[pipe_index].bottom))
+            output = nets[x].activate((bird.y, pipes[pipe_index].x, pipes[pipe_index].height, pipes[pipe_index].bottom))
 
             if output[0] > 0.5:
                 bird.jump()
@@ -415,8 +415,8 @@ def train():
 
     print('\nBest genome:\n{!s}'.format(winner))
 
-    node_names = {-1:'Bird', -2: 'Top Pipe', -3: 'Bottom Pipe', 0:'Jump'}
-    visualize.draw_net(config, winner, view=False, node_names=node_names)
+    node_names = {-1:'Bird', -2: 'Pipe Dist', -3: 'Top Pipe', -4: 'Bottom Pipe', 0:'Jump'}
+    visualize.draw_net(config, winner, view=False, node_names=node_names, prune_unused=True)
     visualize.plot_stats(stats, ylog=False, view=False)
     visualize.plot_species(stats, view=False)
 

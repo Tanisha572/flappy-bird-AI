@@ -7,10 +7,10 @@ digraph {
 	"Bottom Pipe" [fillcolor=lightgray shape=box style=filled]
 	Bird -> 4 [color=green penwidth=1.6460192970308596 style=solid]
 	"Bottom Pipe" -> 4 [color=red penwidth=1.5716365700052994 style=solid]
-	4 -> Jump [color=green penwidth=0.7674335418403827 style=solid]
+	4 -> 0 [color=green penwidth=0.7674335418403827 style=solid]
 	507 -> 529 [color=green penwidth=0.6432850633474688 style=solid]
 	"Pipe Dist" -> 4 [color=green penwidth=0.5252060896293271 style=solid]
-	Jump -> 507 [color=green penwidth=0.6084594025964113 style=dotted]
-	Jump -> 688 [color=green penwidth=0.3606585275812718 style=solid]
+	0 -> 507 [color=green penwidth=0.6084594025964113 style=dotted]
+	0 -> 688 [color=green penwidth=0.3606585275812718 style=solid]
 	688 -> 507 [color=green penwidth=0.7440993338979559 style=solid]
 }
